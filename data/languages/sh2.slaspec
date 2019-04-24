@@ -1,0 +1,516 @@
+define endian=big;
+
+define alignment=2;
+
+define space ram type=ram_space size=4 wordsize=1 default;
+define space register type=register_space size=4;
+
+define register offset=0 size=4
+[r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15];
+
+define register offset=0x100 size=4 [sr gbr vbr mach macl pr pc];
+
+define token instr(16)
+    disp_00_03 = (0, 3)
+    disp_00_07 = (0, 7)
+    disp_00_11 = (0, 11)
+    imm_00_07 = (0, 7)
+    opcode_00_03 = (0, 3)
+    opcode_00_07 = (0, 7)
+    opcode_00_15 = (0, 15)
+    opcode_08_15 = (8, 15)
+    opcode_12_15 = (12, 15)
+    rm_04_07 = (4, 7)
+    rm_08_11 = (8, 11)
+    rn_04_07 = (4, 7)
+    rn_08_11 = (8, 11)
+;
+
+attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
+	r0  r1  r2  r3  r4  r5  r6  r7
+	r8  r9 r10 r11 r12  r13 r14 r15
+];
+
+#
+# SH2 only instructions -> move to seperate file
+#
+:dmuls.l	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1101 
+{}
+
+:dmulu.l	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0101 
+{}
+
+:dt	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010000 
+{}
+
+:mac.l	@rm_04_07+,@rn_08_11+  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
+{}
+
+:mul.l	rm_04_07,rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
+{}
+
+:bf"/s"	disp_00_07  is opcode_08_15=0b10001111 & disp_00_07  
+{}
+
+:bt"/s"	disp_00_07  is opcode_08_15=0b10001101 & disp_00_07  
+{}
+
+:braf	rm_08_11  is opcode_12_15=0b0000 & rm_08_11 & opcode_00_07=0b00100011 
+{}
+
+:bsrf	rm_08_11  is opcode_12_15=0b0000 & rm_08_11 & opcode_00_07=0b00000011 
+{}
+
+#
+# Data Transfer Instructions
+#
+:mov rm_04_07, rn_08_11 is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011 
+{
+	rm_04_07 = rn_08_11;
+}
+    
+:mov imm_00_07,rn_08_11 is opcode_12_15=0b1110 & rn_08_11 & imm_00_07  
+{
+    rn_08_11 = imm_00_07;
+}
+
+:mova	@(disp_00_07,"PC"),"R0"  is opcode_08_15=0b11000111 & disp_00_07  
+{
+    r0 = (disp_00_07*4) + (pc & 0xFFFFFFFC) + 4;
+}
+
+:mov.w	@(disp_00_07,"PC"),rn_08_11  is opcode_12_15=0b1001 & rn_08_11 & disp_00_07  
+{}
+
+:mov.l	@(disp_00_07,"PC"),rn_08_11  is opcode_12_15=0b1101 & rn_08_11 & disp_00_07  
+{}
+
+:mov.b	@rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
+{}
+
+:mov.w	@rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0001 
+{}
+
+:mov.l	@rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0010 
+{}
+
+:mov.b	rm_04_07,@rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
+{}
+
+:mov.w	rm_04_07,@rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0001 
+{}
+
+:mov.l	rm_04_07,@rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0010 
+{}
+
+:mov.b	@rm_04_07+,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0100 
+{}
+
+:mov.w	@rm_04_07+,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0101 
+{}
+
+:mov.l	@rm_04_07+,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0110 
+{}
+
+:mov.b	rm_04_07,@-rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0100 
+{}
+
+:mov.w	rm_04_07,@-rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0101 
+{}
+
+:mov.l	rm_04_07,@-rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0110 
+{}
+
+:mov.b	@(disp_00_03,rm_04_07),"R0"  is opcode_08_15=0b10000100 & rm_04_07 & disp_00_03  
+{}
+
+:mov.w	@(disp_00_03,rm_04_07),"R0"  is opcode_08_15=0b10000101 & rm_04_07 & disp_00_03  
+{}
+
+:mov.l	@(disp_00_03,rm_04_07),rn_08_11  is opcode_12_15=0b0101 & rn_08_11 & rm_04_07 & disp_00_03  
+{}
+
+:mov.b	"R0",@(disp_00_03,rn_04_07)  is opcode_08_15=0b10000000 & rn_04_07 & disp_00_03  
+{}
+
+:mov.w	"R0",@(disp_00_03,rn_04_07)  is opcode_08_15=0b10000001 & rn_04_07 & disp_00_03  
+{}
+
+:mov.l	rm_04_07,@(disp_00_03,rn_08_11)  is opcode_12_15=0b0001 & rn_08_11 & rm_04_07 & disp_00_03  
+{}
+
+:mov.b	@("R0",rm_04_07),rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
+{}
+
+:mov.w	@("R0",rm_04_07),rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1101 
+{}
+
+:mov.l	@("R0",rm_04_07),rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1110 
+{}
+
+:mov.b	rm_04_07,@("R0",rn_08_11)  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b0100 
+{}
+
+:mov.w	rm_04_07,@("R0",rn_08_11)  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b0101 
+{}
+
+:mov.l	rm_04_07,@("R0",rn_08_11)  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b0110 
+{}
+
+:mov.b	@(disp_00_07,"GBR"),"R0"  is opcode_08_15=0b11000100 & disp_00_07  
+{}
+
+:mov.w	@(disp_00_07,"GBR"),"R0"  is opcode_08_15=0b11000101 & disp_00_07  
+{}
+
+:mov.l	@(disp_00_07,"GBR"),"R0"  is opcode_08_15=0b11000110 & disp_00_07  
+{}
+
+:mov.b	"R0",@(disp_00_07,"GBR")  is opcode_08_15=0b11000000 & disp_00_07  
+{}
+
+:mov.w	"R0",@(disp_00_07,"GBR")  is opcode_08_15=0b11000001 & disp_00_07  
+{}
+
+:mov.l	"R0",@(disp_00_07,"GBR")  is opcode_08_15=0b11000010 & disp_00_07  
+{}
+
+:movt	rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00101001 
+{}
+
+:swap.b	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1000 
+{}
+
+:swap.w	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1001 
+{}
+
+:xtrct	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1101 
+{}
+
+#
+# Arithmetic Operation Instructions
+#
+:add	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
+{}
+
+:add	#imm_00_07,rn_08_11  is opcode_12_15=0b0111 & rn_08_11 & imm_00_07  
+{}
+
+:addc	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1110 
+{}
+
+:addv	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
+{}
+
+:cmp"/eq"	#imm_00_07,"R0"  is opcode_08_15=0b10001000 & imm_00_07  
+{}
+
+:cmp"/eq"	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
+{}
+
+:cmp"/hs"	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0010 
+{}
+
+:cmp"/ge"	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011 
+{}
+
+:cmp"/hi"	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0110 
+{}
+
+:cmp"/gt"	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
+{}
+
+:cmp"/pl"	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010101 
+{}
+
+:cmp"/pz"	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010001 
+{}
+
+:cmp"/str"	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
+{}
+
+:div0s	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
+{}
+
+:div0u  is opcode_00_15=0b0000000000011001 
+{}
+
+:div1	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0100 
+{}
+
+:exts.b	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1110 
+{}
+
+:exts.w	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
+{}
+
+:extu.b	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
+{}
+
+:extu.w	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1101 
+{}
+
+:mac.w	@rm_04_07+,@rn_08_11+  is opcode_12_15=0b0100 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
+{}
+
+:muls.w	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
+{}
+
+:mulu.w	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1110 
+{}
+
+:neg	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1011 
+{}
+
+:negc	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1010 
+{}
+
+:sub	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1000 
+{}
+
+:subc	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1010 
+{}
+
+:subv	rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1011 
+{}
+
+#
+# Logic Operation Instructions
+#
+:and	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1001 
+{}
+
+:and	#imm_00_07,"R0"  is opcode_08_15=0b11001001 & imm_00_07  
+{}
+
+:and.b	#imm_00_07,@("R0","GBR")  is opcode_08_15=0b11001101 & imm_00_07  
+{}
+
+:not	rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
+{}
+
+:or	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1011 
+{}
+
+:or	#imm_00_07,"R0"  is opcode_08_15=0b11001011 & imm_00_07  
+{}
+
+:or.b	#imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001111 & imm_00_07  
+{}
+
+:tas.b	@rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00011011 
+{}
+
+:tst	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1000 
+{}
+
+:tst	#imm_00_07,"R0"  is opcode_08_15=0b11001000 & imm_00_07  
+{}
+
+:tst.b	#imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001100 & imm_00_07  
+{}
+
+:xor	rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1010 
+{}
+
+:xor	#imm_00_07,"R0"  is opcode_08_15=0b11001010 & imm_00_07  
+{}
+
+:xor.b	#imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001110 & imm_00_07  
+{}
+
+#
+#Shift Instructions
+#
+:rotcl	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100100
+{}
+
+:rotcr	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100101 
+{}
+
+:rotl	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000100 
+{}
+
+:rotr	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000101 
+{}
+
+:shal	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100000 
+{}
+
+:shar	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100001 
+{}
+
+:shll	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000000 
+{}
+
+:shll2	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00001000 
+{}
+
+:shll8	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00011000 
+{}
+
+:shll16	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00101000 
+{}
+
+:shlr	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000001 
+{}
+
+:shlr2	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00001001 
+{}
+
+:shlr8	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00011001 
+{}
+
+:shlr16	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00101001 
+{}
+
+#
+# Branch Instructions
+#
+:bf	disp_00_07  is opcode_08_15=0b10001011 & disp_00_07
+{}
+
+:bt	disp_00_07  is opcode_08_15=0b10001001 & disp_00_07  
+{}
+
+:bra	disp_00_11  is opcode_12_15=0b1010 & disp_00_11  
+{}
+
+:bsr^disp_00_11  is opcode_12_15=0b1011 & disp_00_11  
+{}
+
+:jmp	@rm_08_11  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00101011 
+{}
+
+:jsr	@rm_08_11  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00001011 
+{}
+
+:rts  is opcode_00_15=0b0000000000001011 
+{}
+
+#
+# System Control Instructions
+#
+:clrmac  is opcode_00_15=0b0000000000101000 
+{
+}
+
+:clrt  is opcode_00_15=0b0000000000001000 
+{
+}
+
+:ldc	rm_08_11",SR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00001110 
+{
+}
+
+:ldc.l	@rm_08_11+,"SR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00000111 
+{
+}
+
+:ldc	rm_08_11,"GBR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00011110 
+{
+}
+
+:ldc.l	@rm_08_11+,"GBR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00010111 
+{
+}
+
+:ldc	rm_08_11,"VBR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00101110 
+{
+}
+
+:ldc.l	@rm_08_11+,"VBR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00100111 
+{
+}
+
+:lds	rm_08_11,"MACH"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00001010 
+{
+}
+
+:ds.l	@rm_08_11+,"MACH"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00000110 
+{
+}
+
+:lds	rm_08_11,"MACL"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00011010 
+{
+}
+
+:lds.l	@rm_08_11+,"MACL"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00010110 
+{
+}
+
+:lds	rm_08_11,"PR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00101010 
+{
+}
+
+:lds.l	@rm_08_11+,"PR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00100110 
+{
+}
+
+:nop  is opcode_00_15=0b0000000000001001 
+{
+}
+
+:rte is opcode_00_15=0b0000000000101011 
+{
+}
+
+:sett  is opcode_00_15=0b0000000000011000 
+{
+}
+
+:sleep  is opcode_00_15=0b0000000000011011 
+{
+}
+
+:stc	"SR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00000010 
+{
+}
+
+:stc.l	"SR",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000011 
+{
+}
+
+:stc	"GBR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00010010 
+{
+}
+
+:stc.l	"GBR",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010011 
+{
+}
+
+:stc	"VBR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00100010 
+{
+}
+
+:stc.l	"VBR",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100011
+{
+}
+
+:sts	"MACH",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00001010 
+{
+}
+
+:sts.l	"MACH",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000010 
+{
+}
+
+:sts	"MACL",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00011010 
+{
+}
+
+:sts.l	"MACL",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010010 
+{
+}
+
+:sts	"PR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00101010 
+{
+}
+
+:sts.l	"PR",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100010 
+{
+}
+
+:trapa	#imm_00_07  is opcode_08_15=0b11000011 & imm_00_07  
+{
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<language_definitions>
+  <language processor="sh2"
+            endian="big"
+            size="32"
+            variant="default"
+            version="1.0"
+            slafile="sh2.sla"
+            processorspec="sh2.pspec"
+            id="SH2:BE:32:default">
+    <description>SH2 processor 32-bit big-endian</description>
+	<compiler name="default" spec="sh2.cspec" id="default"/>
+  </language>
+</language_definitions>
