@@ -3,12 +3,10 @@
 A (WIP) loader and processor for Ghidra for Sega Saturn files. Currently able to:
 - disassemble SH2 after manually specifying processor type. I used the instruction encodings availble from [Renesas SH Instruction Set Summary](http://shared-ptr.com/sh_insns.html) and related github project [shared-ptr/sh_insns](https://github.com/shared-ptr/sh_insns). 
 
-Missing (everything else):
-- PCode decompilation
+Missing (basically everything else):
+- P-code decompilation
 - memory map
-- automatic detection of Sega Saturn files
-
-I anticipate lots of bugs. 
+- automatic detection and loading of Sega Saturn files
 
 ## Screenshots
 
@@ -18,6 +16,8 @@ Loader screenshot
 Disassembly View (Decompiler not working yet)  
 ![Disassembly View](screenshot_loaded.png)
 
+## Issues
+I anticipate lots of bugs. 
 
 ## Installation
 - Rename the root folder to SH2 and copy it to Ghidra/Processors/ and restart Ghidra
