@@ -10,10 +10,19 @@ define register offset=0 size=4
 
 define register offset=0x100 size=4 [sr gbr vbr mach macl pr pc];
 
+#define bitrange T=sr[0,1]
+#                S=sr[1,1];
+#                I0=sr[4,1];
+#                I1=sr[5,1];
+#                I2=sr[6,1];
+#                I3=sr[7,1];
+#                Q=sr[8,1];
+#                M=sr[9,1];
+
 define token instr(16)
-    disp_00_03 = (0, 3)
-    disp_00_07 = (0, 7)
-    disp_00_11 = (0, 11)
+    disp_00_03 = (0, 3) signed
+    disp_00_07 = (0, 7) signed
+    disp_00_11 = (0, 11) signed
     imm_00_07 = (0, 7)
     opcode_00_03 = (0, 3)
     opcode_00_07 = (0, 7)
@@ -31,6 +40,19 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
 	r8  r9 r10 r11 r12  r13 r14 r15
 ];
 
+# helpers for branch instructions
+target00_07: target is disp_00_07 [ target = (disp_00_07 << 1) + inst_start + 4; ] {
+	export *:4 target;
+}
+
+target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4; ] {
+	export *:4 target;
+}
+
+targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
+	export *:4 target;
+}
+
 #
 # SH2 only instructions -> move to seperate file
 #
@@ -41,7 +63,14 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
 {}
 
 :dt	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010000 
-{}
+{
+    rn_08_11 = rn_08_11 -1;
+    #if( rn_08_11 == 0) goto rn_08_11;
+    #sr = 1;
+# set T bit
+     
+
+}
 
 :mac.l	@rm_04_07+,@rn_08_11+  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
 {}
@@ -49,17 +78,32 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
 :mul.l	rm_04_07,rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
 {}
 
-:bf"/s"	disp_00_07  is opcode_08_15=0b10001111 & disp_00_07  
-{}
+:bf"/s"	target00_07  is opcode_08_15=0b10001111 & target00_07  
+{
+    t = (sr & 1);
+    delayslot(1);
+    if (t==0) goto target00_07;
+}
 
-:bt"/s"	disp_00_07  is opcode_08_15=0b10001101 & disp_00_07  
-{}
+:bt"/s"	target00_07  is opcode_08_15=0b10001101 & target00_07
+{
+    t = (sr & 1);
+    delayslot(1);
+    if (t==1) goto target00_07;
+}
 
-:braf	rm_08_11  is opcode_12_15=0b0000 & rm_08_11 & opcode_00_07=0b00100011 
-{}
+:braf	targetm08_11  is opcode_12_15=0b0000 & targetm08_11 & opcode_00_07=0b00100011 
+{
+    delayslot(1);
+    goto targetm08_11;
+}
 
-:bsrf	rm_08_11  is opcode_12_15=0b0000 & rm_08_11 & opcode_00_07=0b00000011 
-{}
+:bsrf	targetm08_11  is opcode_12_15=0b0000 & targetm08_11 & opcode_00_07=0b00000011 
+{
+    pr = inst_start + 4;
+    delayslot(1);
+    goto targetm08_11;
+}
 
 #
 # Data Transfer Instructions
@@ -80,10 +124,16 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
 }
 
 :mov.w	@(disp_00_07,"PC"),rn_08_11  is opcode_12_15=0b1001 & rn_08_11 & disp_00_07  
-{}
+{
+    #r0 = *((disp_00_07*4) + (pc & 0xFFFFFFFC) + 4);
+}
 
-:mov.l	@(disp_00_07,"PC"),rn_08_11  is opcode_12_15=0b1101 & rn_08_11 & disp_00_07  
-{}
+:mov.l	@(disp,"PC"),rn_08_11  is opcode_12_15=0b1101 & rn_08_11 & disp_00_07  [disp = (disp_00_07*4) + (inst_start & 0xFFFFFFFC) + 4;]
+{
+    # BUGBUG sign extension
+    rn_08_11 = disp;
+    
+}
 
 :mov.b	@rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
 {}
@@ -335,128 +385,240 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
 {}
 
 :shal	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100000 
-{}
+{
+    # clear or set T
+    flag = 0xFFFFFFFE + ((rn_08_11 & 0x80000000) >> 31);
+    sr = sr & flag;
+    
+    rn_08_11 = rn_08_11 << 1;
+}
 
 :shar	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100001 
-{}
+{
+    flag = 0xFFFFFFFE + (rn_08_11 & 1);
+    sr = sr & flag;
+    
+    temp = rn_08_11 & 0x80000000;
+    
+    rn_08_11 = rn_08_11 >> 1;
+    
+    #if(temp != 0) rn_08_11 = rn_08_11|0x80000000;
+    # BUGBUG: sign extension
+}
 
 :shll	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000000 
-{}
+{
+    # clear or set T
+    flag = 0xFFFFFFFE + ((rn_08_11 & 0x80000000) >> 31);
+    sr = sr & flag;
+    
+    rn_08_11 = rn_08_11 << 1;
+
+}
 
 :shll2	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00001000 
-{}
+{
+    rn_08_11 = rn_08_11 << 2;
+}
 
 :shll8	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00011000 
-{}
+{
+    rn_08_11 = rn_08_11 << 8;
+}
 
 :shll16	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00101000 
-{}
+{
+    rn_08_11 = rn_08_11 << 16;
+}
 
 :shlr	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000001 
-{}
+{
+    # clear or set T
+    flag = 0xFFFFFFFE + (rn_08_11 & 1);
+    sr = sr & flag;
+    
+    rn_08_11 = rn_08_11 >> 1;
+    rn_08_11 = rn_08_11 & 0x7FFFFFFF;
+
+}
 
 :shlr2	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00001001 
-{}
+{
+    rn_08_11 = rn_08_11 >> 2;
+    rn_08_11 = rn_08_11 & 0x3FFFFFFF;
+}
 
 :shlr8	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00011001 
-{}
+{
+    rn_08_11 = rn_08_11 >> 8;
+    rn_08_11 = rn_08_11 & 0x00FFFFFF;
+}
 
 :shlr16	rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00101001 
-{}
+{
+    rn_08_11 = rn_08_11 >> 16;
+    rn_08_11 = rn_08_11 & 0x0000FFFF;
+}
 
 #
 # Branch Instructions
 #
-:bf	disp_00_07  is opcode_08_15=0b10001011 & disp_00_07
-{}
 
-:bt	disp_00_07  is opcode_08_15=0b10001001 & disp_00_07  
-{}
+:bf	target00_07  is opcode_08_15=0b10001011 & target00_07
+{
+    t = (sr & 1);
+    if (t==0) goto target00_07;
+}
 
-:bra	disp_00_11  is opcode_12_15=0b1010 & disp_00_11  
-{}
+:bt	target00_07  is opcode_08_15=0b10001001 & target00_07  
+{
+    t = (sr & 1);
+    if (t==1) goto target00_07;
+}
 
-:bsr^disp_00_11  is opcode_12_15=0b1011 & disp_00_11  
-{}
+:bra	target00_11  is opcode_12_15=0b1010 & target00_11  
+{
+    delayslot(1);
+    goto target00_11;
+}
+
+:bsr    target00_11  is opcode_12_15=0b1011 & target00_11  
+{
+    pr = inst_start + 4;
+    delayslot(1);
+    call target00_11;
+}
 
 :jmp	@rm_08_11  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00101011 
-{}
+{
+    delayslot(1);
+    goto rm_08_11;
+}
 
 :jsr	@rm_08_11  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00001011 
-{}
+{
+    pr = inst_start + 4;
+    delayslot(1);
+    call rm_08_11;
+}
 
 :rts  is opcode_00_15=0b0000000000001011 
-{}
+{
+    delayslot(1);
+    #pc = pr;
+    #goto [pr];
+    return [pr];
+}
 
 #
 # System Control Instructions
 #
 :clrmac  is opcode_00_15=0b0000000000101000 
 {
+    mach = 0;
+    macl = 0;
 }
 
 :clrt  is opcode_00_15=0b0000000000001000 
 {
+    sr = sr & 0xFFFFFFFE;
 }
 
 :ldc	rm_08_11",SR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00001110 
 {
+    sr = rm_08_11 & 0x0FFF0FFF;
 }
 
 :ldc.l	@rm_08_11+,"SR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00000111 
 {
+    sr = *rm_08_11 & 0x0FFF0FFF;
+    rm_08_11 = rm_08_11 + 4;
+    
 }
 
 :ldc	rm_08_11,"GBR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00011110 
 {
+    gbr = rm_08_11;
 }
 
 :ldc.l	@rm_08_11+,"GBR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00010111 
 {
+    gbr = *rm_08_11;
+    rm_08_11 = rm_08_11 + 4;
 }
 
 :ldc	rm_08_11,"VBR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00101110 
 {
+    vbr = rm_08_11;
 }
 
 :ldc.l	@rm_08_11+,"VBR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00100111 
 {
+    vbr = *rm_08_11;
+    rm_08_11 = rm_08_11 + 4;
 }
 
 :lds	rm_08_11,"MACH"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00001010 
 {
+    mach = rm_08_11;
+    mach = mach | 0x000003ff;
 }
 
-:ds.l	@rm_08_11+,"MACH"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00000110 
+:lds.l	@rm_08_11+,"MACH"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00000110 
 {
+    mach = *rm_08_11;
+    mach = mach | 0x000003ff;
+    rm_08_11 = rm_08_11 + 4;
 }
 
 :lds	rm_08_11,"MACL"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00011010 
 {
+    macl = rm_08_11;
 }
 
 :lds.l	@rm_08_11+,"MACL"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00010110 
 {
+    macl = *rm_08_11;
+    rm_08_11 = rm_08_11 + 4;
 }
 
 :lds	rm_08_11,"PR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00101010 
 {
+    pr = rm_08_11;
 }
 
+# BUGBUG: all @ instructions need a load
 :lds.l	@rm_08_11+,"PR"  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00100110 
 {
+    pr = *rm_08_11;
+    rm_08_11 = rm_08_11 + 4;
 }
 
 :nop  is opcode_00_15=0b0000000000001001 
 {
+    # BUGBUG: intentional nop
 }
 
 :rte is opcode_00_15=0b0000000000101011 
 {
+    #local _pc;
+    #local _sr;
+    
+    _pc:4 = *r15;
+    r15 = r15 + 4;
+    
+    _sr:4 = *r15 & 0x000063F3;
+    r15  = r15 + 4;
+    
+    delayslot(1);
+    
+    pc = _pc;
+    sr = _sr;
 }
 
 :sett  is opcode_00_15=0b0000000000011000 
 {
+    sr = sr & 1;
 }
 
 :sleep  is opcode_00_15=0b0000000000011011 
@@ -465,52 +627,77 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
 
 :stc	"SR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00000010 
 {
+    rn_08_11 = sr;
 }
 
 :stc.l	"SR",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000011 
 {
+    rn_08_11 = rn_08_11 -4;
+    *rn_08_11 = sr;
 }
 
 :stc	"GBR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00010010 
 {
+    rn_08_11 = gbr;
 }
 
 :stc.l	"GBR",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010011 
 {
+    rn_08_11 = rn_08_11 -4;
+    *rn_08_11 = gbr;
 }
 
 :stc	"VBR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00100010 
 {
+    rn_08_11 = vbr;
 }
 
 :stc.l	"VBR",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100011
 {
+    rn_08_11 = rn_08_11 -4;
+    *rn_08_11 = vbr;
 }
 
 :sts	"MACH",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00001010 
 {
+    rn_08_11 = mach;
 }
 
 :sts.l	"MACH",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000010 
 {
+    rn_08_11 = rn_08_11 -4;
+    *rn_08_11 = mach;
 }
 
 :sts	"MACL",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00011010 
 {
+    rn_08_11 = macl;
 }
 
 :sts.l	"MACL",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010010 
 {
+    rn_08_11 = rn_08_11 -4;
+    *rn_08_11 = macl;
 }
 
 :sts	"PR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00101010 
 {
+    rn_08_11 = pr;
 }
 
 :sts.l	"PR",@-rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100010 
 {
+    rn_08_11 = rn_08_11 -4;
+    *rn_08_11 = pr;
 }
 
 :trapa	#imm_00_07  is opcode_08_15=0b11000011 & imm_00_07  
 {
+    r15 = r15 -4;
+    *r15 = sr;
+    
+    r15 = r15- 4;
+    *r15 = pc + 2;
+    
+    pc = *(vbr + (imm_00_07 * 4));
 }
