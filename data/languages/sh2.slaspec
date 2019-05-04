@@ -12,14 +12,15 @@ define register offset=0 size=4
 
 define register offset=0x100 size=4 [sr gbr vbr mach macl pr pc];
 
-#define bitrange T=sr[0,1]
-#                S=sr[1,1];
-#                I0=sr[4,1];
-#                I1=sr[5,1];
-#                I2=sr[6,1];
-#                I3=sr[7,1];
-#                Q=sr[8,1];
-#                M=sr[9,1];
+# SR Flags
+@define T_FLAG   "sr[0,1]"
+@define S_FLAG   "sr[1,1]"
+@define I0_FLAG  "sr[4,1]"
+@define I1_FLAG  "sr[5,1]"
+@define I2_FLAG  "sr[6,1]"
+@define I3_FLAG  "sr[7,1]"
+@define Q_FLAG   "sr[8,1]"
+@define M_FLAG   "sr[9,1]"
 
 define token instr(16)
     disp_00_03 = (0, 3) signed
@@ -81,11 +82,7 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 :dt rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010000 
 {
     rn_08_11 = rn_08_11 -1;
-    
-    if( rn_08_11 != 0) goto <SKIP_FLAG>;
-    sr = sr | 1;
-    
-    <SKIP_FLAG>
+    $(T_FLAG) = (rn_08_11 == 0);
 }
 
 :mac.l  @rm_04_07+,@rn_08_11+  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
@@ -127,7 +124,7 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 
 :bf"/s" target00_07  is opcode_08_15=0b10001111 & target00_07  
 {
-    t = (sr & 1);
+    t = $(T_FLAG);
     delayslot(1);
     if (t==0) goto target00_07;
 }
@@ -177,8 +174,9 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 
 :mov.l  @(disp_00_07,"PC"),rn_08_11  is opcode_12_15=0b1101 & rn_08_11 & disp_00_07
 {
-    # BUGBUG sign extension    
-    rn_08_11 =  sext(*:4 ((pc & 0xFFFFFFFC) + 4 + (disp_00_07 << 2)));
+    # BUGBUG sign extension
+    local temp:4 = inst_start;
+    rn_08_11 =  sext(*:4 ((temp & 0xFFFFFFFC) + 4 + (disp_00_07 << 2)));
 }
 
 :mov.b  @rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
@@ -573,109 +571,345 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 }
 
 :div0s  rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
-{}
+{
+    $(Q_FLAG) = !((rn_08_11 & 0x80000000) == 0);
+    $(M_FLAG) = !((rm_04_07 & 0x80000000) == 0);
+    
+    $(T_FLAG) = ! ($(M_FLAG) == $(Q_FLAG));
+}
 
 :div0u  is opcode_00_15=0b0000000000011001 
-{}
+{
+    $(M_FLAG) = 0;
+    $(Q_FLAG) = 0;
+    $(T_FLAG) = 0;
+}
 
 :div1   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0100 
-{}
+{
+    # BUGBUG: unfinished
+}
 
 :exts.b rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1110 
-{}
+{
+    rn_08_11 = rm_04_07;
+    
+    if((rm_04_07 & 0x00000080) == 0) goto <UNSIGNED>;
+    
+    rn_08_11 = rn_08_11 | 0xFFFFFF00;
+    goto <END>;
+    
+    <UNSIGNED>
+    rn_08_11 = rn_08_11 & 0x000000FF;
+    
+    <END>
+}
 
 :exts.w rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
-{}
+{
+    rn_08_11 = rm_04_07;
+    
+    if((rm_04_07 & 0x00008000) == 0) goto <UNSIGNED>;
+    
+    rn_08_11 = rn_08_11 | 0xFFFF0000;
+    goto <END>;
+    
+    <UNSIGNED>
+    rn_08_11 = rn_08_11 & 0x0000FFFF;
+    
+    <END>
+}
 
 :extu.b rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
-{}
+{
+    rn_08_11 = rm_04_07 & 0x000000FF;
+}
 
 :extu.w rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1101 
-{}
+{
+    rn_08_11 = rm_04_07 & 0x0000FFFF;
+}
 
 :mac.w  @rm_04_07+,@rn_08_11+  is opcode_12_15=0b0100 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
-{}
+{
+    # BUGBUG: this is wrong
+    
+    local tempm:4;
+    local tempn:4;
+    local dest;
+    local src; 
+    local ans;
+    local templ;
+    
+    tempn = *:2 rn_08_11;
+    rn_08_11 = rn_08_11 + 2;
+    
+    tempm = *:2 rm_04_07;
+    rm_04_07 = rm_04_07 + 2;
+    
+    templ = macl:4;
+    tempm = tempn * tempm;
+    
+    #dest = 0;
+    #if(macl < 0) goto 
+    macl = macl + tempm;
+
+}
 
 :muls.w rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
-{}
+{
+    macl = sext(rn_08_11 & 0xFFFF) * sext(rm_04_07 & 0xFFFF);
+}
 
 :mulu.w rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1110 
-{}
+{
+    macl = zext(rn_08_11 & 0xFFFF) * zext(rm_04_07 & 0xFFFF);
+}
 
 :neg    rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1011 
-{}
+{
+    rn_08_11 = 0 - rm_04_07;
+}
 
 :negc   rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b1010 
-{}
+{
+    local temp;
+    
+    temp = 0 - rm_04_07;
+    rn_08_11 = temp - (sr & 1);
+    
+    if(0 s< temp || temp s< rn_08_11) goto <SET_BIT>;
+    goto <SKIP_BIT>;
+    
+    <SET_BIT>
+    sr = sr | 0x1;
+    
+    <SKIP_BIT>
+}
 
 :sub    rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1000 
-{}
+{
+    rn_08_11 = rn_08_11 - rm_04_07;
+}
 
 :subc   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1010 
-{}
+{
+    local temp0;
+    local temp1;
+    
+    temp1 = rn_08_11 - rm_04_07;
+    temp0 = rn_08_11;
+    
+    rn_08_11 = temp1 - (sr & 0x1);
+    
+    if(temp0 < temp1 || temp1 < rn_08_11) goto <SET_BIT>;
+    goto <SKIP_BIT>;
+    
+    <SET_BIT>
+    sr = sr | 0x1;
+    
+    <SKIP_BIT>
+}
 
 :subv   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1011 
-{}
+{
+    local flag = rm_04_07 <= rn_08_11;
+    
+    rn_08_11 = rn_08_11 - rm_04_07;
+    
+    sr = sr & 0xFFFFFFFE;
+    
+    if(flag) goto <SKIP_BIT>;
+    
+    sr = sr | 1;
+    
+    <SKIP_BIT>
+}
 
 #
 # Logic Operation Instructions
 #
 :and    rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1001 
-{}
+{
+    rn_08_11 = rn_08_11 & rm_04_07;
+}
 
-:and    #imm_00_07,"R0"  is opcode_08_15=0b11001001 & imm_00_07  
-{}
+:and   imm_00_07,"R0"  is opcode_08_15=0b11001001 & imm_00_07  
+{
+    r0 = (r0 & imm_00_07) & 0x000000FF;
+}
 
-:and.b  #imm_00_07,@("R0","GBR")  is opcode_08_15=0b11001101 & imm_00_07  
-{}
+:and.b  imm_00_07,@("R0","GBR")  is opcode_08_15=0b11001101 & imm_00_07  
+{
+    local temp = *:1 (gbr + r0);
+    temp = (temp & imm_00_07) & 0x000000FF;
+    
+    *:1 (gbr + r0) = temp;
+}
 
 :not    rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
-{}
+{
+    rn_08_11 = ~rm_04_07;
+}
 
 :or rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1011 
-{}
+{
+    rn_08_11 = rn_08_11 | rm_04_07;
+}
 
-:or #imm_00_07,"R0"  is opcode_08_15=0b11001011 & imm_00_07  
-{}
+:or imm_00_07,"R0"  is opcode_08_15=0b11001011 & imm_00_07  
+{
+    r0 = r0 | zext(imm_00_07:4);
+}
 
-:or.b   #imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001111 & imm_00_07  
-{}
+:or.b  imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001111 & imm_00_07  
+{
+    local temp = *:1 (gbr + r0);
+    temp = (temp & imm_00_07) | 0x000000FF;
+    
+    *:1 (gbr + r0) = temp;
+}
 
 :tas.b  @rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00011011 
-{}
+{
+    local temp = *:1 rn_08_11;
+    
+    sr = sr & 0xFFFFFFFE;
+    
+    if(temp == 1) goto <SKIP_BIT>;
+    
+    sr = sr | 0x1;
+    
+    <SKIP_BIT>
+    
+    temp = temp | 0x80;
+    
+    *:1 rn_08_11 = temp;
+}
 
 :tst    rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1000 
-{}
+{
+    local temp = rm_04_07 & rm_04_07;
+    
+    sr = sr & 0xFFFFFFFE;
+    
+    if(temp != 0) goto <SKIP_BIT>;
+    
+    sr = sr | 0x1;
+    
+    <SKIP_BIT>
+}
 
-:tst    #imm_00_07,"R0"  is opcode_08_15=0b11001000 & imm_00_07  
-{}
+:tst    imm_00_07,"R0"  is opcode_08_15=0b11001000 & imm_00_07  
+{
+    local temp = r0 & (imm_00_07 & 0x000000FF);
+    
+    sr = sr & 0xFFFFFFFE;
+    
+    if(temp != 0) goto <SKIP_BIT>;
+    
+    sr = sr | 0x1;
+    
+    <SKIP_BIT>
+}
 
-:tst.b  #imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001100 & imm_00_07  
-{}
+:tst.b  imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001100 & imm_00_07  
+{
+    local temp = *:1 (gbr + r0);
+    temp = temp & (imm_00_07 & 0x000000FF);
+    
+    sr = sr & 0xFFFFFFFE;
+    
+    if(temp != 0) goto <SKIP_BIT>;
+    
+    sr = sr | 0x1;
+    
+    <SKIP_BIT>
+}
 
 :xor    rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1010 
-{}
+{
+    rn_08_11 = rn_08_11 ^ rm_04_07;
+}
 
-:xor    #imm_00_07,"R0"  is opcode_08_15=0b11001010 & imm_00_07  
-{}
+:xor   imm_00_07,"R0"  is opcode_08_15=0b11001010 & imm_00_07  
+{
+    r0 = r0 ^ (imm_00_07 & 0x000000FF);
+}
 
 :xor.b  #imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001110 & imm_00_07  
-{}
+{
+    local temp = *:1 (gbr + r0);
+    temp = temp & (imm_00_07 & 0x000000FF);
+    
+    *:1 (gbr + r0) = temp;
+}
 
 #
 #Shift Instructions
 #
 :rotcl  rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100100
-{}
+{
+    local temp:4;
+    local flag:4;
+    
+    temp = rn_08_11 & 0x80000000;
+    
+    rn_08_11 = (rn_08_11 << 1) & 0xFFFFFFFE;
+    
+    flag = sr & 1;
+    
+    if(flag == 0) goto <SKIP_BIT>;
+    
+    rn_08_11 = rn_08_11 | 0x1;
+    
+    <SKIP_BIT>
+    
+    
+    sr = sr & 0xFFFFFFFE;
+    sr = sr | temp;
+
+}
 
 :rotcr  rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100101 
-{}
+{
+    local temp:4;
+    local flag:4;
+    
+    temp = rn_08_11 & 1;
+    
+    rn_08_11 = (rn_08_11 >> 1) & 0x7FFFFFFF;
+    
+    flag = sr & 1;
+    
+    if(flag == 0) goto <SKIP_BIT>;
+    
+    rn_08_11 = rn_08_11 | 0x80000000;
+    
+    <SKIP_BIT>
+    
+    
+    sr = sr & 0xFFFFFFFE;
+    sr = sr | temp;
+}
 
 :rotl   rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000100 
-{}
+{
+    flag = 0xFFFFFFFE + ((rn_08_11 & 0x80000000) >> 31);
+    sr = sr & flag;
+    
+    rn_08_11 = (rn_08_11 << 1) & 0xFFFFFFFE;
+    rn_08_11 = rn_08_11 | (flag & 0x1);
+}
 
 :rotr   rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000101 
-{}
+{
+    flag = 0xFFFFFFFE + (rn_08_11 & 0x1);
+    sr = sr & flag;
+    
+    rn_08_11 = (rn_08_11 >> 1) & 0x7FFFFFFF;
+    rn_08_11 = rn_08_11 | (flag << 31);
+}
 
 :shal   rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00100000 
 {
@@ -759,14 +993,12 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 
 :bf target00_07  is opcode_08_15=0b10001011 & target00_07
 {
-    t = (sr & 1);
-    if (t==0) goto target00_07;
+    if ($(T_FLAG) == 0) goto target00_07;
 }
 
 :bt target00_07  is opcode_08_15=0b10001001 & target00_07  
 {
-    t = (sr & 1);
-    if (t==1) goto target00_07;
+    if ($(T_FLAG) == 1) goto target00_07;
 }
 
 :bra    target00_11  is opcode_12_15=0b1010 & target00_11  
@@ -907,6 +1139,8 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
     
     pc = _pc;
     sr = _sr;
+    
+    goto [pc];
 }
 
 :sett  is opcode_00_15=0b0000000000011000 
@@ -916,6 +1150,7 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 
 :sleep  is opcode_00_15=0b0000000000011011 
 {
+    # BUGBUG: call sleep();
 }
 
 :stc    "SR",rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00000010 
@@ -993,4 +1228,5 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
     *r15 = pc + 2;
     
     pc = *(vbr + (imm_00_07 * 4));
+    goto [pc];
 }
