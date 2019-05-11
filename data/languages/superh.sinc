@@ -56,8 +56,9 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
     export *:4 target;
 }
 
+@if SH_VERSION == "2"
 #
-# SH2 only instructions -> move to seperate file
+# SH2 only instructions
 #
 :dmuls.l    rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1101 
 {
@@ -151,6 +152,7 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
     delayslot(1);
     call [rm_08_11];
 }
+@endif
 
 #
 # Data Transfer Instructions

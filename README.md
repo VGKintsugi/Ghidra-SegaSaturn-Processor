@@ -17,7 +17,7 @@ Todo:
 Loader screenshot  
 ![Loader](screenshot_loader.png)
 
-Disassembly View (Decompiler somewhat working, lots of bugs)  
+Disassembly View (Decompiler somewhat working, still has some bugs)  
 ![Disassembly View](screenshot_loaded.png)
 
 ## Issues
