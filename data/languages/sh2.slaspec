@@ -137,17 +137,19 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
     if (t==1) goto target00_07;
 }
 
-:braf   targetm08_11  is opcode_12_15=0b0000 & targetm08_11 & opcode_00_07=0b00100011 
+# BUGBUG: not disassembling
+:braf   rm_08_11  is opcode_12_15=0b0000 & rm_08_11 & opcode_00_07=0b00100011 
 {
+    local temp:4 = inst_start + 4 + rm_08_11;
     delayslot(1);
-    goto targetm08_11;
+    goto [temp];
 }
 
-:bsrf   targetm08_11  is opcode_12_15=0b0000 & targetm08_11 & opcode_00_07=0b00000011 
+:bsrf   rm_08_11  is opcode_12_15=0b0000 & rm_08_11 & opcode_00_07=0b00000011 
 {
     pr = inst_start + 4;
     delayslot(1);
-    call targetm08_11;
+    call [rm_08_11];
 }
 
 #
@@ -155,7 +157,7 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 #
 :mov rm_04_07, rn_08_11 is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011 
 {
-    rm_04_07 = rn_08_11;
+    rn_08_11 = rm_04_07;
 }
     
 :mov imm_00_07,rn_08_11 is opcode_12_15=0b1110 & rn_08_11 & imm_00_07  
@@ -177,10 +179,9 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 
 :mov.l  @(disp_00_07,"PC"),rn_08_11  is opcode_12_15=0b1101 & rn_08_11 & disp_00_07
 {
-    # BUGBUG sign extension
     local temp:4 = inst_start;
-    rn_08_11 =  sext(*:4 ((temp & 0xFFFFFFFC) + 4 + (disp_00_07 << 2)));
-    #rn_08_11 = 0x06004024;
+    local disp:4 = zext(disp_00_07:1 & 0xFF);
+    rn_08_11 = sext(*:4 ((temp & 0xFFFFFFFC) + 4 + (disp << 2)));
 }
 
 :mov.b  @rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
@@ -200,12 +201,12 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 
 :mov.b  rm_04_07,@rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
 {
-    *:1 rn_08_11 = rm_04_07;
+    *:1 rn_08_11 = rm_04_07:1;
 }
 
 :mov.w  rm_04_07,@rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0001 
 {
-    *:2 rn_08_11 = rm_04_07;
+    *:2 rn_08_11 = rm_04_07:2;
 }
 
 :mov.l  rm_04_07,@rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0010 
@@ -272,17 +273,18 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
 
 :mov.b  "R0",@(disp_00_03,rn_04_07)  is opcode_08_15=0b10000000 & rn_04_07 & disp_00_03  
 {
-    *:1 (rn_04_07 + disp_00_03) = r0;
+    *:1 (rn_04_07 + disp_00_03) = r0:1;
 }
 
 :mov.w  "R0",@(disp_00_03,rn_04_07)  is opcode_08_15=0b10000001 & rn_04_07 & disp_00_03  
 {
-    *:2 (rn_04_07 + (disp_00_03 << 1)) = r0;
+    *:2 (rn_04_07 + (disp_00_03 << 1)) = r0:2;
 }
 
 :mov.l  rm_04_07,@(disp_00_03,rn_08_11)  is opcode_12_15=0b0001 & rn_08_11 & rm_04_07 & disp_00_03  
 {
-    *:4 (rn_08_11 + (disp_00_03 << 1)) = rm_04_07;
+    local disp:4 = (disp_00_03 & 0xF);
+    *:4 (rn_08_11 + (disp << 2)) = rm_04_07;
 }
 
 :mov.b  @("R0",rm_04_07),rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
@@ -1215,7 +1217,7 @@ targetm08_11: target is rm_08_11 [ target = rm_08_11 + inst_start + 4; ] {
     *rn_08_11 = pr;
 }
 
-:trapa  #imm_00_07  is opcode_08_15=0b11000011 & imm_00_07  
+:trapa  imm_00_07  is opcode_08_15=0b11000011 & imm_00_07
 {
     r15 = r15 -4;
     *r15 = sr;
