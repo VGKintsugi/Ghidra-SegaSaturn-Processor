@@ -384,7 +384,7 @@ target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4;
     $(T_FLAG) = 0;
     goto <END>;
        
-   <SET_T>
+    <SET_T>
     
     $(T_FLAG) = 1;
        
@@ -836,7 +836,7 @@ target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4;
     ans = ans + dest;    
     
     # if (S == 1)
-    if($(S_FLAG) != 1) goto <S_0>; # BUGBUG
+    if($(S_FLAG) != 1) goto <S_0>;
     
     if(ans != 1) goto <END>;
     
@@ -1066,7 +1066,7 @@ target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4;
     r0 = r0 ^ (imm_00_07 & 0x000000FF);
 }
 
-:xor.b  #imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001110 & imm_00_07  
+:xor.b  imm_00_07,@("R0,GBR")  is opcode_08_15=0b11001110 & imm_00_07  
 {
     local temp = *:1 (gbr + r0);
     temp = temp & (imm_00_07 & 0x000000FF);
@@ -1223,7 +1223,6 @@ target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4;
 #
 # Branch Instructions
 #
-
 :bf target00_07  is opcode_08_15=0b10001011 & target00_07
 {
     if ($(T_FLAG) == 0) goto target00_07;
@@ -1287,8 +1286,6 @@ target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4;
 {
     delayslot(1);
     goto [rm_08_11];
-    #goto   0x6004000;
-  
 }
 
 :jsr    @rm_08_11  is opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00001011 
@@ -1301,8 +1298,6 @@ target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4;
 :rts  is opcode_00_15=0b0000000000001011 
 {
     delayslot(1);
-    #pc = pr;
-    #goto [pr];
     return [pr];
 }
 
@@ -1417,14 +1412,11 @@ target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4;
 :nop  is opcode_00_15=0b0000000000001001 
 {
     # BUGBUG: intentional nop
-    r0 = r0;
+    r0 = r0; # do this to suppress warning
 }
 
 :rte is opcode_00_15=0b0000000000101011 
-{
-    #local _pc;
-    #local _sr;
-    
+{    
     _pc:4 = *r15;
     r15 = r15 + 4;
     
