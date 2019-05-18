@@ -13,10 +13,10 @@ Todo:
 
 ## Screenshots
 
-Processors
+Processors  
 ![Processors](screenshot_processors.png)
 
-Loader
+Loader  
 ![Loader](screenshot_loader.png)
 
 Disassembly View (Decompiler working, still has some bugs)  
