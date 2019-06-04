@@ -23,9 +23,12 @@ define register offset=0x100 size=4 [sr gbr vbr mach macl pr pc];
 @define M_FLAG   "sr[9,1]"
 
 define token instr(16)
-    disp_00_03 = (0, 3) signed
-    disp_00_07 = (0, 7) signed
-    disp_00_11 = (0, 11) signed
+    disp_00_03 = (0, 3) 
+    sdisp_00_03 = (0, 3) signed
+    disp_00_07 = (0, 7) 
+    sdisp_00_07 = (0, 7) signed
+    disp_00_11 = (0, 11)
+    sdisp_00_11 = (0, 11) signed
     imm_00_07 = (0, 7)
     simm_00_07 = (0, 7) signed
     opcode_00_03 = (0, 3)
@@ -47,11 +50,11 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
 ];
 
 # helpers for branch instructions
-target00_07: target is disp_00_07 [ target = (disp_00_07 << 1) + inst_start + 4; ] {
+target00_07: target is sdisp_00_07 [ target = (sdisp_00_07 << 1) + inst_start + 4; ] {
     export *:4 target;
 }
 
-target00_11: target is disp_00_11 [ target = (disp_00_11 << 1) + inst_start + 4; ] {
+target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 4; ] {
     export *:4 target;
 }
 
