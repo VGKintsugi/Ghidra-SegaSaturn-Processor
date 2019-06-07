@@ -49,7 +49,11 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
     r8  r9 r10 r11 r12  r13 r14 r15
 ];
 
-# helpers for branch instructions
+# helpers for branch and mov displacement instructions
+mdisp_00_03: target is disp_00_03 [ target = (disp_00_03 << 2); ] {
+    export *:4 target;
+}
+
 target00_07: target is sdisp_00_07 [ target = (sdisp_00_07 << 1) + inst_start + 4; ] {
     export *:4 target;
 }
@@ -61,6 +65,8 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 #
 # Data Transfer Instructions
 #
+
+
 :mov rm_04_07, rn_08_11 is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011 
 {
     rn_08_11 = rm_04_07;
@@ -190,9 +196,9 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     r0 = sext(*:2 (disp_00_03 + rm_04_07));
 }
 
-:mov.l  @(disp_00_03,rm_04_07),rn_08_11  is opcode_12_15=0b0101 & rn_08_11 & rm_04_07 & disp_00_03  
+:mov.l  @(mdisp_00_03,rm_04_07),rn_08_11  is opcode_12_15=0b0101 & rn_08_11 & rm_04_07 & mdisp_00_03  
 {
-    rn_08_11 = *:4 ((disp_00_03 << 2) + rn_08_11);
+    rn_08_11 = *:4 (mdisp_00_03 + rn_08_11);
 }
 
 :mov.b  r0,@(disp_00_03,rn_04_07)  is r0 & opcode_08_15=0b10000000 & rn_04_07 & disp_00_03  
@@ -205,10 +211,9 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     *:2 (rn_04_07 + (disp_00_03 << 1)) = r0:2;
 }
 
-:mov.l  rm_04_07,@(disp_00_03,rn_08_11)  is opcode_12_15=0b0001 & rn_08_11 & rm_04_07 & disp_00_03  
+:mov.l  rm_04_07,@(mdisp_00_03,rn_08_11)  is opcode_12_15=0b0001 & rn_08_11 & rm_04_07 & mdisp_00_03  
 {
-    local disp:4 = (disp_00_03 & 0xF);
-    *:4 (rn_08_11 + (disp << 2)) = rm_04_07;
+    *:4 (rn_08_11 + mdisp_00_03) = rm_04_07;
 }
 
 :mov.b  @(r0,rm_04_07),rn_08_11  is r0 & opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
