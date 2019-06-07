@@ -49,11 +49,7 @@ attach variables [ rm_04_07 rm_08_11 rn_04_07 rn_08_11 ] [
     r8  r9 r10 r11 r12  r13 r14 r15
 ];
 
-# helpers for branch and mov displacement instructions
-mdisp_00_03: target is disp_00_03 [ target = (disp_00_03 << 2); ] {
-    export *:4 target;
-}
-
+# helpers for branch
 target00_07: target is sdisp_00_07 [ target = (sdisp_00_07 << 1) + inst_start + 4; ] {
     export *:4 target;
 }
@@ -66,7 +62,6 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 # Data Transfer Instructions
 #
 
-
 :mov rm_04_07, rn_08_11 is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011 
 {
     rn_08_11 = rm_04_07;
@@ -77,23 +72,22 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     rn_08_11 = simm_00_07;
 }
 
-:mova   @(disp_00_07,pc),r0  is r0 & pc & opcode_08_15=0b11000111 & disp_00_07  
+:mova   @(disp,pc),r0  is r0 & pc & opcode_08_15=0b11000111 & disp_00_07  [disp = (disp_00_07 << 2); ]
 {
     local temp:4 = inst_start;
-    r0 = (disp_00_07*2) + (temp & 0xFFFFFFFC) + 4;
+    r0 = disp + (temp & 0xFFFFFFFC) + 4;
 }
 
-:mov.w  @(disp_00_07,pc),rn_08_11  is pc & opcode_12_15=0b1001 & rn_08_11 & disp_00_07  
+:mov.w  @(target,pc),rn_08_11  is pc & opcode_12_15=0b1001 & rn_08_11 & disp_00_07 [ target = (disp_00_07 << 1) + 4; ]
 {
     local temp:4 = inst_start;
-    rn_08_11 =  sext(*:2 (temp + 4 + (disp_00_07 << 1)));
+    rn_08_11 =  sext(*:2 (temp + target));
 }
 
-:mov.l  @(disp_00_07,pc),rn_08_11  is pc & opcode_12_15=0b1101 & rn_08_11 & disp_00_07
+:mov.l  @(disp,pc),rn_08_11  is pc & opcode_12_15=0b1101 & rn_08_11 & disp_00_07 [disp = (disp_00_07 << 2) + 4; ]
 {
     local temp:4 = inst_start;
-    local disp:4 = zext(disp_00_07:1 & 0xFF);
-    rn_08_11 = *:4 ((temp & 0xFFFFFFFC) + 4 + (disp << 2));
+    rn_08_11 = *:4 ((temp & 0xFFFFFFFC) + disp);
 }
 
 :mov.b  @rm_04_07,rn_08_11  is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
@@ -191,14 +185,14 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     r0 = sext(*:1 (disp_00_03 + rm_04_07));
 }
 
-:mov.w  @(disp_00_03,rm_04_07),r0  is r0 & opcode_08_15=0b10000101 & rm_04_07 & disp_00_03  
+:mov.w  @(disp,rm_04_07),r0  is r0 & opcode_08_15=0b10000101 & rm_04_07 & disp_00_03 [ disp = disp_00_03 << 1; ]
 {
-    r0 = sext(*:2 (disp_00_03 + rm_04_07));
+    r0 = sext(*:2 (disp + rm_04_07));
 }
 
-:mov.l  @(mdisp_00_03,rm_04_07),rn_08_11  is opcode_12_15=0b0101 & rn_08_11 & rm_04_07 & mdisp_00_03  
+:mov.l  @(disp,rm_04_07),rn_08_11  is opcode_12_15=0b0101 & rn_08_11 & rm_04_07 & disp_00_03  [ disp = disp_00_03 << 2; ]
 {
-    rn_08_11 = *:4 (mdisp_00_03 + rn_08_11);
+    rn_08_11 = *:4 (disp + rn_08_11);
 }
 
 :mov.b  r0,@(disp_00_03,rn_04_07)  is r0 & opcode_08_15=0b10000000 & rn_04_07 & disp_00_03  
@@ -206,14 +200,14 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     *:1 (rn_04_07 + disp_00_03) = r0:1;
 }
 
-:mov.w  r0,@(disp_00_03,rn_04_07)  is r0 & opcode_08_15=0b10000001 & rn_04_07 & disp_00_03  
+:mov.w  r0,@(disp,rn_04_07)  is r0 & opcode_08_15=0b10000001 & rn_04_07 & disp_00_03  [ disp = disp_00_03 << 1; ]
 {
-    *:2 (rn_04_07 + (disp_00_03 << 1)) = r0:2;
+    *:2 (rn_04_07 + disp) = r0:2;
 }
 
-:mov.l  rm_04_07,@(mdisp_00_03,rn_08_11)  is opcode_12_15=0b0001 & rn_08_11 & rm_04_07 & mdisp_00_03  
+:mov.l  rm_04_07,@(disp,rn_08_11)  is opcode_12_15=0b0001 & rn_08_11 & rm_04_07 & disp_00_03 [ disp = disp_00_03 << 2; ]
 {
-    *:4 (rn_08_11 + mdisp_00_03) = rm_04_07;
+    *:4 (rn_08_11 + disp) = rm_04_07;
 }
 
 :mov.b  @(r0,rm_04_07),rn_08_11  is r0 & opcode_12_15=0b0000 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
@@ -251,14 +245,14 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     r0 = sext(*:1 (gbr + disp_00_07));
 }
 
-:mov.w  @(disp_00_07,gbr),r0  is gbr & r0 & opcode_08_15=0b11000101 & disp_00_07  
+:mov.w  @(disp,gbr),r0  is gbr & r0 & opcode_08_15=0b11000101 & disp_00_07  [disp = (disp_00_07 << 1); ]
 {
-    r0 = sext(*:2 (gbr + disp_00_07));
+    r0 = sext(*:2 (gbr + disp));
 }
 
-:mov.l  @(disp_00_07,gbr),r0  is gbr & r0 & opcode_08_15=0b11000110 & disp_00_07  
+:mov.l  @(disp,gbr),r0  is gbr & r0 & opcode_08_15=0b11000110 & disp_00_07  [disp = (disp_00_07 << 2); ]
 {
-    r0 = *:4 (gbr + disp_00_07);
+    r0 = *:4 (gbr + disp);
 }
 
 :mov.b  r0,@(disp_00_07,gbr)  is r0 & gbr & opcode_08_15=0b11000000 & disp_00_07  
@@ -266,14 +260,14 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     *:1 (gbr + disp_00_07) = r0;
 }
 
-:mov.w  r0,@(disp_00_07,gbr)  is r0 & gbr & opcode_08_15=0b11000001 & disp_00_07  
+:mov.w  r0,@(disp,gbr)  is r0 & gbr & opcode_08_15=0b11000001 & disp_00_07 [disp = (disp_00_07 << 1); ]
 {
-    *:2 (gbr + (disp_00_07 << 1)) = r0;
+    *:2 (gbr + disp) = r0;
 }
 
-:mov.l  r0,@(disp_00_07,gbr)  is r0 & gbr & opcode_08_15=0b11000010 & disp_00_07  
+:mov.l  r0,@(disp,gbr)  is r0 & gbr & opcode_08_15=0b11000010 & disp_00_07 [disp = (disp_00_07 << 2); ]
 {
-    *:4 (gbr + (disp_00_07 << 2)) = r0;
+    *:4 (gbr + disp) = r0;
 }
 
 :movt   rn_08_11  is opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00101001 
