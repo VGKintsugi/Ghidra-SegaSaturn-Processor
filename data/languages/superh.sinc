@@ -143,7 +143,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     
     # Check n != m    
     if(m == n) goto <END>;
-    rm_04_07 = rm_04_07 + 1;
+    rm_04_07 = rm_04_07 + 2;
     
     <END>
 }
@@ -157,7 +157,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     
     # Check n != m    
     if(m == n) goto <END>;
-    rm_04_07 = rm_04_07 + 1;
+    rm_04_07 = rm_04_07 + 4;
     
     <END>
 }
@@ -1233,9 +1233,8 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 @if SH_VERSION == "2"
 :bf"/s" target00_07  is opcode_08_15=0b10001111 & target00_07  
 {
-    local t = $(T_FLAG);
     delayslot(1);
-    if (t==0) goto target00_07;
+    if ($(T_FLAG)==0) goto target00_07;
 }
 @endif
 
@@ -1247,9 +1246,8 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 @if SH_VERSION == "2"
 :bt"/s" target00_07  is opcode_08_15=0b10001101 & target00_07
 {
-    local t = $(T_FLAG);
     delayslot(1);
-    if (t==1) goto target00_07;
+    if ($(T_FLAG)==1) goto target00_07;
 }
 @endif
 
