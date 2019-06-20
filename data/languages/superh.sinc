@@ -326,21 +326,11 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     local temp1;
     
     temp1 = rn_08_11 + rm_04_07;
-    temp0 = temp1 + zext($(T_FLAG));
+    temp0 = temp1;
+
+    rn_08_11 = temp1 + zext($(T_FLAG));    
     
-    if(temp0 > temp1) goto <SET_T>;
-    
-    $(T_FLAG) = 0;
-    
-    if(temp1 > rn_08_11) goto <SET_T>;
-    
-    goto <END>;
-    
-    <SET_T>
-    
-    $(T_FLAG) = 1;
-    
-    <END>
+    $(T_FLAG) = (temp0 > temp1) | (temp1 > rn_08_11);
 }
 
 :addv   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1111 
@@ -358,137 +348,50 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     ans = (rn_08_11 s< 0);
     
     ans = ans + dest;
-    
-    if(src == 0 || src == 2) goto <TEST_ANS>;
-    
-    $(T_FLAG) = 0;
-    goto <END>;
 
-    <TEST_ANS>
-    
-    if(ans == 1) goto <SET_T>;
-
-    $(T_FLAG) = 0;
-    goto <END>;
-
-    <SET_T>
-    $(T_FLAG) = 1;
-    
-    <END>
+    $(T_FLAG) = (src == 0 || src == 2) && (ans == 1);
 }
 
 :cmp"/eq"   imm_00_07,r0  is r0 & opcode_08_15=0b10001000 & imm_00_07  
 {
     local temp:4 = sext(imm_00_07:1);
-    
-    if(r0 == temp) goto <SET_T>;
        
-    $(T_FLAG) = 0;
-    goto <END>;
-       
-    <SET_T>
-    
-    $(T_FLAG) = 1;
-       
-    <END>
+    $(T_FLAG) = (r0 == temp);
 }
 
 :cmp"/eq"   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0000 
 {
-    if(rn_08_11 == rm_04_07) goto <SET_T>;
-       
-    $(T_FLAG) = 0;
-    goto <END>;
-       
-   <SET_T>
-    
-    $(T_FLAG) = 1;
-       
-    <END>
+    $(T_FLAG) = (rn_08_11 == rm_04_07);
 }
 
 :cmp"/hs"   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0010 
-{
-    if(rn_08_11 >= rm_04_07) goto <SET_T>;
-       
-    $(T_FLAG) = 0;
-    goto <END>;
-       
-   <SET_T>
-    
-    $(T_FLAG) = 1;
-       
-    <END>
+{      
+    $(T_FLAG) = (rn_08_11 >= rm_04_07);
 }
 
 :cmp"/ge"   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011 
-{
-    if(rn_08_11 s>= rm_04_07) goto <SET_T>;
-       
-    $(T_FLAG) = 0;
-    goto <END>;
-       
-   <SET_T>
-    
-    $(T_FLAG) = 1;
-       
-    <END>
+{     
+    $(T_FLAG) = (rn_08_11 s>= rm_04_07); 
 }
 
 :cmp"/hi"   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0110 
 {
-    if(rn_08_11 > rm_04_07) goto <SET_T>;
-       
-    $(T_FLAG) = 0;
-    goto <END>;
-       
-   <SET_T>
-    
-    $(T_FLAG) = 1;
-       
-    <END>
+    $(T_FLAG) = (rn_08_11 > rm_04_07);       
 }
 
 :cmp"/gt"   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
 {
-    if(rn_08_11 s> rm_04_07) goto <SET_T>;
-       
-    $(T_FLAG) = 0;
-    goto <END>;
-       
-   <SET_T>
-    
-    $(T_FLAG) = 1;
-       
-    <END>
+    $(T_FLAG) = (rn_08_11 s> rm_04_07);
 }
 
 :cmp"/pl"   rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010101 
 {
-    if(rn_08_11 s> 0) goto <SET_T>;
-       
-    $(T_FLAG) = 0;
-    goto <END>;
-       
-   <SET_T>
-    
-    $(T_FLAG) = 1;
-       
-    <END>
+    $(T_FLAG) = (rn_08_11 s> 0);
 }
 
 :cmp"/pz"   rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010001 
 {
-    if(rn_08_11 s>= 0) goto <SET_T>;
-       
-    $(T_FLAG) = 0;
-    goto <END>;
-       
-   <SET_T>
-    
-    $(T_FLAG) = 1;
-       
-    <END>
+    $(T_FLAG) = (rn_08_11 s>= 0);
 }
 
 :cmp"/str"  rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1100 
@@ -506,16 +409,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     LH = (temp & 0x0000FF00) >> 8;
     LL = (temp & 0x000000FF);
 
-    local test:1 = (HH != 0) && (HL != 0) && (LH != 0) && (LL != 0);
-    
-    if(test == 1) goto <SET_T>;
-    
-    $(T_FLAG) = 0;
-    goto <END>;
-    
-    <SET_T>
-    $(T_FLAG) = 1;
-    <END>
+    $(T_FLAG) = (HH != 0) && (HL != 0) && (LH != 0) && (LL != 0);
 }
 
 :div0s  rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b0111 
@@ -523,7 +417,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     $(Q_FLAG) = !((rn_08_11 & 0x80000000) == 0);
     $(M_FLAG) = !((rm_04_07 & 0x80000000) == 0);
     
-    $(T_FLAG) = ! ($(M_FLAG) == $(Q_FLAG));
+    $(T_FLAG) = !($(M_FLAG) == $(Q_FLAG));
 }
 
 :div0u  is opcode_00_15=0b0000000000011001 
@@ -909,13 +803,9 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     temp = 0 - rm_04_07;
     rn_08_11 = temp - zext($(T_FLAG));
     
-    if(0 s< temp || temp s< rn_08_11) goto <SET_BIT>;
-    goto <SKIP_BIT>;
-    
-    <SET_BIT>
-    $(T_FLAG) = 1;
-    
-    <SKIP_BIT>
+    # BUGBUG: should temp be signed or unsigned??
+    # Documentation says if(0 < temp) not 0 != temp
+    $(T_FLAG) = (0 != temp) || (temp < rn_08_11);
 }
 
 :sub    rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1000 
@@ -933,28 +823,25 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     
     rn_08_11 = temp1 - zext($(T_FLAG));
     
-    if(temp0 < temp1 || temp1 < rn_08_11) goto <SET_BIT>;
-    goto <SKIP_BIT>;
-    
-    <SET_BIT>
-    $(T_FLAG) = 1;
-    
-    <SKIP_BIT>
+   $(T_FLAG) = (temp0 < temp1 || temp1 < rn_08_11);
 }
 
 :subv   rm_04_07,rn_08_11  is opcode_12_15=0b0011 & rn_08_11 & rm_04_07 & opcode_00_03=0b1011 
 {
-    local flag = rm_04_07 <= rn_08_11;
-    
+    local dest;
+    local src;
+    local ans;
+
+    dest = !(rn_08_11 s>= 0);
+    src = !(rm_04_07 s>= 0);
+
+    src = src + dest;    
     rn_08_11 = rn_08_11 - rm_04_07;
-    
-    $(T_FLAG) = 0;
-    
-    if(flag) goto <SKIP_BIT>;
-    
-    $(T_FLAG) = 1;
-    
-    <SKIP_BIT>
+
+    ans = (rn_08_11 s>= 0);
+    ans = ans + dest;
+
+   $(T_FLAG) = (src == 1) && (ans == 1);    
 }
 
 #
@@ -1005,13 +892,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 {
     local temp = *:1 rn_08_11;
     
-    $(T_FLAG) = 0;
-    
-    if(temp == 1) goto <SKIP_BIT>;
-    
-    $(T_FLAG) = 1;
-    
-    <SKIP_BIT>
+    $(T_FLAG) = (temp == 0);
     
     temp = temp | 0x80;
     
@@ -1022,26 +903,14 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 {
     local temp = rm_04_07 & rm_04_07;
     
-    $(T_FLAG) = 0;
-    
-    if(temp != 0) goto <SKIP_BIT>;
-    
-    $(T_FLAG) = 1;
-    
-    <SKIP_BIT>
+    $(T_FLAG) = ((rm_04_07 & rm_04_07) == 0);
 }
 
 :tst    imm_00_07,r0  is r0 & opcode_08_15=0b11001000 & imm_00_07  
 {
     local temp = r0 & (imm_00_07 & 0x000000FF);
     
-    $(T_FLAG) = 0;
-    
-    if(temp != 0) goto <SKIP_BIT>;
-    
-    $(T_FLAG) = 1;
-    
-    <SKIP_BIT>
+    $(T_FLAG) = (temp == 0);
 }
 
 :tst.b  imm_00_07,@(r0,gbr)  is r0 & gbr & opcode_08_15=0b11001100 & imm_00_07  
@@ -1049,13 +918,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     local temp = *:1 (gbr + r0);
     temp = temp & (imm_00_07 & 0x000000FF);
     
-    $(T_FLAG) = 0;
-    
-    if(temp != 0) goto <SKIP_BIT>;
-    
-    $(T_FLAG) = 1;
-    
-    <SKIP_BIT>
+    $(T_FLAG) = (temp == 0);
 }
 
 :xor    rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1010 
@@ -1100,7 +963,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 {
     local temp:1;
     
-    temp = ((rn_08_11 & 1) == 1);
+    temp = !((rn_08_11 & 1) == 0);
     
     rn_08_11 = (rn_08_11 >> 1) & 0x7FFFFFFF;
     
@@ -1201,7 +1064,6 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     
     rn_08_11 = rn_08_11 >> 1;
     rn_08_11 = rn_08_11 & 0x7FFFFFFF;
-
 }
 
 :shlr2  rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00001001 
