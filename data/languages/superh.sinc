@@ -192,7 +192,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 
 :mov.l  @(disp,rm_04_07),rn_08_11  is opcode_12_15=0b0101 & rn_08_11 & rm_04_07 & disp_00_03  [ disp = disp_00_03 << 2; ]
 {
-    rn_08_11 = *:4 (disp + rn_08_11);
+    rn_08_11 = *:4 (disp + rm_04_07);
 }
 
 :mov.b  r0,@(disp_00_03,rn_04_07)  is r0 & opcode_08_15=0b10000000 & rn_04_07 & disp_00_03  
@@ -293,7 +293,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
     
     temp = (rm_04_07 >> 16) & 0x0000FFFF;
     
-    rn_08_11 = rm_04_07 << 15;
+    rn_08_11 = rm_04_07 << 16;
     rn_08_11 = rn_08_11 | temp;
 }
 
@@ -534,7 +534,7 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 
 :dt rn_08_11  is opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00010000 
 {
-    rn_08_11 = rn_08_11 -1;
+    rn_08_11 = rn_08_11 - 1;
     $(T_FLAG) = (rn_08_11 == 0);
 }
 @endif
@@ -901,14 +901,12 @@ target00_11: target is sdisp_00_11 [ target = (sdisp_00_11 << 1) + inst_start + 
 
 :tst    rm_04_07,rn_08_11  is opcode_12_15=0b0010 & rn_08_11 & rm_04_07 & opcode_00_03=0b1000 
 {
-    local temp = rm_04_07 & rm_04_07;
-    
     $(T_FLAG) = ((rm_04_07 & rm_04_07) == 0);
 }
 
 :tst    imm_00_07,r0  is r0 & opcode_08_15=0b11001000 & imm_00_07  
 {
-    local temp = r0 & (imm_00_07 & 0x000000FF);
+   local temp = r0 & (imm_00_07 & 0x000000FF);
     
     $(T_FLAG) = (temp == 0);
 }
