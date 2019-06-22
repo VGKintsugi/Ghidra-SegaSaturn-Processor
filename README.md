@@ -29,10 +29,12 @@ I fixed a lot of the errors in the SLEIGH definitions but I anticipate there wil
 - Rename the root folder to SuperH and copy it to Ghidra/Processors/ and restart Ghidra
 
 ## Credits
-- [shared-ptr/sh_insns](https://github.com/shared-ptr/sh_insns) - instruction definitions
+- [shared-ptr/sh_insns](https://github.com/shared-ptr/sh_insns) - SH-1/SH-2 instruction definitions
+- [Yabause](https://github.com/Yabause/yabause) - Sega Saturn emulator I used to verify my disassembly and execution
+- [Sega Saturn Multiplayer Task Force](http://vieille.merde.free.fr/) - repo of homebrew Sega Saturn games with source code
 - [xyzz/ghidra-mep](https://github.com/xyzz/ghidra-mep) - example Ghidra processor module
 - [Thog/ghidra_falcon](https://github.com/Thog/ghidra_falcon) - example Ghidra processor module
-- [Yabause](https://github.com/Yabause/yabause) - Sega Saturn emulator I used to sanity check my disassembly 
+
 
 
 
