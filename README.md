@@ -1,3 +1,6 @@
+This module is in the process of being merged into Ghidra. Once that's done I will mark this project as archived and read-only. 
+
+
 ## Ghidra Sega Saturn Processor Module
 
 A (WIP) Ghidra processor module for the Sega Saturn. The Sega Saturn uses dual SuperH SH-2 processors for games and a dedicated SuperH SH-1 to control the CD-ROM drive.  
