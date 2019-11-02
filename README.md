@@ -1,4 +1,4 @@
-*This repository is archived now that it has been merged upstream into Ghidra. The SuperH SH-1/SH-2 (and many bug fixes!) are included with the [9.1](https://ghidra-sre.org/releaseNotes_9.1_final.html) release of Ghidra. File any bug reports with the [Ghidra repository](https://github.com/NationalSecurityAgency/ghidra) and I (VGKintsugi) will take a look.*
+*This repository is archived now that it has been merged upstream into Ghidra. The SuperH SH-1/SH-2 processor module (and many bug fixes!) are included with the [9.1](https://ghidra-sre.org/releaseNotes_9.1_final.html) release of Ghidra. File any bug reports with the [Ghidra repository](https://github.com/NationalSecurityAgency/ghidra) and I (VGKintsugi) will take a look.*
 
 ## Ghidra Sega Saturn Processor Module
 
