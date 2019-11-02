@@ -1,4 +1,4 @@
-*This project is archived now that it has been merged into Ghidra. You can download the SuperH directory directly from [Ghidra's trunk](https://github.com/NationalSecurityAgency/ghidra/tree/master/Ghidra/Processors/SuperH) or wait for the upcoming 9.1 release of Ghidra.*
+*This repository is archived now that it has been merged upstream into Ghidra. The SuperH SH-1/SH-2 (and many bug fixes!) are included with the [9.1](https://ghidra-sre.org/releaseNotes_9.1_final.html) release of Ghidra.*
 
 ## Ghidra Sega Saturn Processor Module
 
